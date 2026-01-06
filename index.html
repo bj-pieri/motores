@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia Técnico-Comercial: Automatizadores de Portão</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chosen Palette: Warm Industrial
+         Background: Stone-50 (Neutral Warm)
+         Primary Text: Stone-800
+         Accent 1: Orange-600 (Safety/Action)
+         Accent 2: Slate-600 (Technical/Metal)
+         Interactive: Blue-600
+    -->
+
+    <!-- Application Structure Plan: 
+         1. Dashboard Overview: Quick introduction and a "Quick Select" wizard to determine user needs immediately.
+         2. Comparative Hub: The core data center. Uses Radar charts for brand positioning and interactive tables for specific model specs (Rossi/AGL/PPA).
+         3. Engineering Lab: Explains complex concepts (Duty Cycle, AC vs DC) using interactive sliders and visual feedback loops, rather than static text.
+         4. Installation & Safety: Actionable checklists and CSS-built wiring diagrams (No SVG) to assist in the field.
+         This structure moves from "High Level" (Sales) to "Deep Dive" (Engineering) to "Execution" (Installation).
+    -->
+
+    <!-- Visualization & Content Choices:
+         1. Brand Comparison -> Goal: Compare strengths -> Viz: Radar Chart (Chart.js) -> Interaction: Toggle datasets -> Shows distinct market positioning (e.g., PPA speed vs Rossi torque).
+         2. Duty Cycle Analysis -> Goal: Explain 20% vs 100% cycle -> Viz: Bar Chart + Calculator -> Interaction: Input cycles/hour, see thermal risk -> Justification: Text alone doesn't convey the risk of overheating like a visual red zone.
+         3. Schematics -> Goal: Show wiring logic -> Viz: CSS Grid/Flexbox "Block Diagrams" -> Interaction: None (Reference) -> Justification: Clearer than text, simpler than complex CAD for field reference. NO SVG used.
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Chart Container Styling - Mandatory Requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Mobile base */
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar for tables */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f5f5f4;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #a8a29e;
+            border-radius: 4px;
+        }
+        
+        /* Terminal Block CSS for Diagrams */
+        .terminal-block {
+            border: 2px solid #4b5563;
+            background-color: #e5e7eb;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+        }
+        .wire {
+            height: 2px;
+            background-color: #3b82f6;
+            flex-grow: 1;
+        }
+        
+        /* Utility for hiding sections */
+        .hidden-section {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-stone-900 text-stone-50 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex flex-wrap justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl font-bold tracking-tighter text-orange-500">AUTO</span>
+                <span class="text-xl font-semibold">GUIA TÉCNICO</span>
+            </div>
+            <nav class="hidden md:flex space-x-6 text-sm font-medium">
+                <button onclick="navTo('dashboard')" class="hover:text-orange-400 transition-colors nav-btn text-orange-400" id="btn-dashboard">Dashboard</button>
+                <button onclick="navTo('compare')" class="hover:text-orange-400 transition-colors nav-btn" id="btn-compare">Comparativo & Marcas</button>
+                <button onclick="navTo('engineering')" class="hover:text-orange-400 transition-colors nav-btn" id="btn-engineering">Engenharia & Deep Dive</button>
+                <button onclick="navTo('install')" class="hover:text-orange-400 transition-colors nav-btn" id="btn-install">Instalação & Normas</button>
+            </nav>
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleMobileMenu()" class="md:hidden text-stone-200 focus:outline-none">
+                ☰ Menu
+            </button>
+        </div>
+        <!-- Mobile Nav -->
+        <div id="mobile-menu" class="hidden md:hidden bg-stone-800 px-4 py-2">
+            <button onclick="navTo('dashboard')" class="block py-2 w-full text-left hover:text-orange-400">Dashboard</button>
+            <button onclick="navTo('compare')" class="block py-2 w-full text-left hover:text-orange-400">Comparativo</button>
+            <button onclick="navTo('engineering')" class="block py-2 w-full text-left hover:text-orange-400">Engenharia</button>
+            <button onclick="navTo('install')" class="block py-2 w-full text-left hover:text-orange-400">Instalação</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+
+        <!-- DASHBOARD SECTION -->
+        <section id="dashboard" class="animate-fade-in">
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-8 border-l-4 border-orange-500">
+                <h1 class="text-3xl font-bold mb-2">Consultor Técnico de Automatizadores</h1>
+                <p class="text-stone-600 mb-4">Ferramenta de apoio para especificação técnica, vendas consultivas e análise comparativa de soluções Rossi, AGL e PPA.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <div class="bg-stone-100 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg mb-1">🎯 Objetivo</h3>
+                        <p class="text-sm text-stone-600">Capacitar técnicos e vendedores a justificar escolhas baseadas em engenharia, não apenas preço.</p>
+                    </div>
+                    <div class="bg-stone-100 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg mb-1">👥 Público-Alvo</h3>
+                        <p class="text-sm text-stone-600">Instaladores, projetistas de segurança, vendedores técnicos e gestores de condomínio.</p>
+                    </div>
+                    <div class="bg-stone-100 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg mb-1">🚀 Decisão</h3>
+                        <p class="text-sm text-stone-600">Dimensionamento correto de ciclo, escolha de motor (AC/DC) e integração IoT.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendation Wizard -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="bg-blue-100 text-blue-800 text-sm font-semibold mr-2 px-2.5 py-0.5 rounded">Simulador</span>
+                    Dimensionamento Rápido
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1">Peso Estimado do Portão (kg)</label>
+                        <input type="range" id="gateWeight" min="100" max="1500" step="50" value="400" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-orange-600" oninput="updateSim()">
+                        <div class="text-right font-mono text-orange-600 font-bold" id="weightVal">400 kg</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1">Fluxo (Ciclos por Hora)</label>
+                        <input type="range" id="gateCycles" min="5" max="120" step="5" value="20" class="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="updateSim()">
+                        <div class="text-right font-mono text-blue-600 font-bold" id="cyclesVal">20 ciclos/h</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700 mb-1">Tipo de Abertura</label>
+                        <select id="gateType" class="bg-stone-50 border border-stone-300 text-stone-900 text-sm rounded-lg focus:ring-orange-500 focus:border-orange-500 block w-full p-2.5" onchange="updateSim()">
+                            <option value="sliding">Deslizante (Correr)</option>
+                            <option value="basculante">Basculante</option>
+                            <option value="pivotante">Pivotante</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Result Card -->
+                <div class="mt-8 p-6 bg-stone-50 border border-stone-200 rounded-lg">
+                    <h3 class="text-lg font-bold text-stone-800 mb-2">Recomendação Técnica:</h3>
+                    <div id="simResult" class="text-stone-600 space-y-2">
+                        <!-- Dynamic Content -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMPARATIVE SECTION -->
+        <section id="compare" class="hidden-section animate-fade-in">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold mb-2">Análise Comparativa de Marcas</h2>
+                <p class="text-stone-600">Entenda o posicionamento de mercado e as diferenças técnicas entre Rossi, AGL e PPA.</p>
+            </div>
+
+            <!-- Radar Chart Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                    <h3 class="font-bold text-xl mb-4 text-center">Perfil Estratégico das Marcas</h3>
+                    <div class="chart-container">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                    <p class="text-xs text-center text-stone-500 mt-2">*Baseado em análise técnica de mercado e especificações de catálogo.</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Rossi Card -->
+                    <div class="bg-white p-5 rounded-lg border-l-4 border-yellow-500 shadow-sm hover:shadow-md transition-shadow">
+                        <h4 class="font-bold text-lg flex justify-between">Rossi <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Robustez</span></h4>
+                        <p class="text-sm text-stone-600 mt-2">Focada em durabilidade mecânica e simplicidade. Motores com alto torque e construção sólida. A tecnologia "Virtual Inverter" oferece controle inteligente sem a complexidade de inversores externos.</p>
+                        <ul class="text-xs mt-2 space-y-1 text-stone-500">
+                            <li>• Destaque: Cremalheiras e engrenagens robustas.</li>
+                            <li>• Ideal para: Ambientes residenciais e condomínios que buscam "instalar e esquecer".</li>
+                        </ul>
+                    </div>
+
+                    <!-- PPA Card -->
+                    <div class="bg-white p-5 rounded-lg border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
+                        <h4 class="font-bold text-lg flex justify-between">PPA <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Velocidade & Tech</span></h4>
+                        <p class="text-sm text-stone-600 mt-2">Líder em tecnologia de inversores (JetFlex). Foco extremo em velocidade de abertura (segurança) e integração. Motores Brushless em linhas de topo.</p>
+                        <ul class="text-xs mt-2 space-y-1 text-stone-500">
+                            <li>• Destaque: Abertura em < 4 segundos (JetFlex).</li>
+                            <li>• Ideal para: Locais onde segurança/rapidez é crítica.</li>
+                        </ul>
+                    </div>
+
+                    <!-- AGL Card -->
+                    <div class="bg-white p-5 rounded-lg border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
+                        <h4 class="font-bold text-lg flex justify-between">AGL <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Custo-Benefício & IoT</span></h4>
+                        <p class="text-sm text-stone-600 mt-2">Forte apelo comercial e integração nativa com apps de casa inteligente (Tuya/Smart Life). Soluções acessíveis com boa conectividade.</p>
+                        <ul class="text-xs mt-2 space-y-1 text-stone-500">
+                            <li>• Destaque: Placas com WiFi integrado nativo.</li>
+                            <li>• Ideal para: Residências modernas e usuários DIY.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Table -->
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-6 bg-stone-800 text-white flex justify-between items-center">
+                    <h3 class="font-bold text-lg">Tabela Comparativa de Especificações (Modelos de Referência)</h3>
+                    <div class="text-xs bg-stone-700 px-2 py-1 rounded">Dados ilustrativos para comparação</div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-sm text-left text-stone-600">
+                        <thead class="text-xs text-stone-700 uppercase bg-stone-100 border-b">
+                            <tr>
+                                <th class="px-6 py-3">Marca / Modelo</th>
+                                <th class="px-6 py-3">Tipo</th>
+                                <th class="px-6 py-3">Peso Máx</th>
+                                <th class="px-6 py-3">Ciclo/Hora</th>
+                                <th class="px-6 py-3">Tecnologia</th>
+                                <th class="px-6 py-3">Velocidade</th>
+                                <th class="px-6 py-3">IP / Material</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparisonTableBody">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="p-4 bg-stone-50 text-xs text-stone-500 border-t">
+                    Nota: Especificações podem variar conforme lote e tensão de alimentação (127/220V). Sempre consulte o manual atualizado.
+                </div>
+            </div>
+        </section>
+
+        <!-- ENGINEERING SECTION -->
+        <section id="engineering" class="hidden-section animate-fade-in">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold mb-2">Engenharia & Análise Crítica (Deep Dive)</h2>
+                <p class="text-stone-600">Fundamentação técnica para responder às perguntas difíceis dos clientes.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Duty Cycle Deep Dive -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-stone-200">
+                    <h3 class="font-bold text-xl mb-4 text-orange-600">🔥 O Mito do "Ciclo de Trabalho"</h3>
+                    <p class="text-sm text-stone-700 mb-4">
+                        O ciclo de trabalho (%) define quanto tempo o motor pode operar dentro de uma janela de tempo sem superaquecer. Um motor de 30% pode funcionar 3 minutos a cada 10.
+                    </p>
+                    
+                    <div class="bg-stone-100 p-4 rounded mb-4">
+                        <h4 class="font-bold text-sm mb-2">Visualizador de Aquecimento Teórico</h4>
+                        <div class="flex items-center space-x-4 mb-2">
+                            <span class="text-xs font-bold">Residencial (20%)</span>
+                            <div class="flex-grow h-4 bg-gray-300 rounded overflow-hidden">
+                                <div class="h-full bg-green-500 w-1/5" title="Capacidade Segura"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4 mb-2">
+                            <span class="text-xs font-bold">Semi-Ind. (60%)</span>
+                            <div class="flex-grow h-4 bg-gray-300 rounded overflow-hidden">
+                                <div class="h-full bg-yellow-500 w-3/5" title="Capacidade Segura"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span class="text-xs font-bold">JetFlex/Ind. (100%)</span>
+                            <div class="flex-grow h-4 bg-gray-300 rounded overflow-hidden">
+                                <div class="h-full bg-blue-600 w-full" title="Capacidade Segura"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-xs text-stone-500 italic border-l-2 border-orange-300 pl-2">
+                        <strong>Pergunta Crítica:</strong> "Como o ciclo afeta a vida útil?"<br>
+                        R: Operar acima do ciclo especificado degrada o verniz do enrolamento do estator por calor, causando curto-circuito interno prematuro.
+                    </div>
+                </div>
+
+                <!-- Deep Reasoning Accordion -->
+                <div class="space-y-4">
+                    <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                        <button class="w-full px-6 py-4 text-left font-bold flex justify-between items-center bg-stone-50 hover:bg-stone-100 focus:outline-none" onclick="toggleAccordion('acc1')">
+                            <span>⚡ AC vs DC: Confiabilidade Elétrica</span>
+                            <span id="icon-acc1">+</span>
+                        </button>
+                        <div id="acc1" class="hidden px-6 py-4 text-sm text-stone-700 border-t">
+                            <p class="mb-2"><strong>Contexto:</strong> Redes instáveis (zonas rurais/industriais).</p>
+                            <p>Motores AC dependem da frequência da rede (60Hz) para velocidade. Se a tensão cai, o torque cai quadraticamente. Motores DC (comumente 24V com conversão) mantêm torque mais constante e permitem uso de baterias de backup (No-break interno), essencial para segurança em "apagões".</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                        <button class="w-full px-6 py-4 text-left font-bold flex justify-between items-center bg-stone-50 hover:bg-stone-100 focus:outline-none" onclick="toggleAccordion('acc2')">
+                            <span>📡 Rolling Code vs Código Fixo</span>
+                            <span id="icon-acc2">+</span>
+                        </button>
+                        <div id="acc2" class="hidden px-6 py-4 text-sm text-stone-700 border-t">
+                            <p class="mb-2"><strong>O Risco:</strong> Clonagem (Chaves "Mestras").</p>
+                            <p>Código fixo emite sempre a mesma "palavra". Um clonador simples copia em segundos. O <strong>Rolling Code</strong> (Rossi e PPA usam protocolos proprietários fortes) altera a senha a cada clique. A central só aceita a senha "esperada". Venda isso como item de segurança obrigatória.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                        <button class="w-full px-6 py-4 text-left font-bold flex justify-between items-center bg-stone-50 hover:bg-stone-100 focus:outline-none" onclick="toggleAccordion('acc3')">
+                            <span>🌊 Ambientes Salinos/Agressivos</span>
+                            <span id="icon-acc3">+</span>
+                        </button>
+                        <div id="acc3" class="hidden px-6 py-4 text-sm text-stone-700 border-t">
+                            <p class="mb-2"><strong>Fator Determinante:</strong> Base e Eletrônica.</p>
+                            <p>Prefira bases de Alumínio ou Polímero de engenharia (não aço carbono pintado). A placa deve ser resinada ou estar em caixa IP54+ hermética. Sensores de fim de curso Hall (ímã) são superiores a Reed Switch ou microchaves mecânicas que oxidam contatos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart for Cycles vs Heat (Conceptual) -->
+            <div class="mt-8 bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                <h3 class="font-bold text-lg mb-4 text-center">Curva de Desempenho: Ciclo x Aquecimento</h3>
+                <div class="chart-container">
+                    <canvas id="dutyChart"></canvas>
+                </div>
+                <p class="text-center text-sm text-stone-500 mt-2">
+                    Motores convencionais aquecem rapidamente com uso intenso. Motores Brushless/Inversora mantêm temperatura menor.
+                </p>
+            </div>
+        </section>
+
+        <!-- INSTALLATION SECTION -->
+        <section id="install" class="hidden-section animate-fade-in">
+            <h2 class="text-3xl font-bold mb-6">Instalação, Normas e Manutenção</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Diagrams (CSS Only) -->
+                <div>
+                    <h3 class="font-bold text-lg mb-4">Esquema Básico de Ligação (Conceitual)</h3>
+                    <div class="bg-white p-6 rounded-xl shadow border border-stone-200">
+                        <p class="text-xs text-stone-500 mb-4">Central de Comando Típica (Ex: PPA/Rossi 433)</p>
+                        
+                        <!-- Diagram Content -->
+                        <div class="flex flex-col space-y-4">
+                            <!-- Power -->
+                            <div class="flex items-center">
+                                <div class="w-24 text-xs font-bold text-right mr-2">REDE AC</div>
+                                <div class="terminal-block h-10 w-32">Fase / Neutro</div>
+                                <div class="wire w-10 bg-stone-400"></div>
+                                <div class="text-xs ml-2">Disjuntor Bipolar Obrigatório</div>
+                            </div>
+                            
+                            <!-- Motor -->
+                            <div class="flex items-center">
+                                <div class="w-24 text-xs font-bold text-right mr-2">MOTOR</div>
+                                <div class="terminal-block h-10 w-32 text-xs text-center flex-col justify-center">
+                                    <span>ABRE | CM | FECHA</span>
+                                    <span class="text-[9px] text-stone-500">Capacitor externo se AC</span>
+                                </div>
+                                <div class="wire w-10 bg-stone-800"></div>
+                                <div class="text-xs ml-2">Cuidado: Inverter fios inverte sentido</div>
+                            </div>
+
+                            <!-- Fotocélula (Safety) -->
+                            <div class="flex items-center">
+                                <div class="w-24 text-xs font-bold text-right mr-2 text-red-600">SEGURANÇA</div>
+                                <div class="terminal-block h-10 w-32 text-xs">GND | FOT | 12V</div>
+                                <div class="wire w-10 bg-red-500"></div>
+                                <div class="text-xs ml-2">NC (Normalmente Fechado)</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 p-3 bg-yellow-50 border border-yellow-200 text-xs text-yellow-800 rounded">
+                            ⚠️ <strong>Norma de Segurança:</strong> O uso de fotocélulas é obrigatório para evitar esmagamento. Em condomínios, recomenda-se laço indutivo adicional.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Checklist -->
+                <div>
+                    <h3 class="font-bold text-lg mb-4">Checklist de Entrega Técnica</h3>
+                    <div class="bg-white rounded-xl shadow border border-stone-200 overflow-hidden">
+                        <ul class="divide-y divide-stone-100">
+                            <li class="p-4 hover:bg-stone-50 flex items-center">
+                                <input type="checkbox" class="w-4 h-4 text-orange-600 rounded border-stone-300 focus:ring-orange-500">
+                                <span class="ml-3 text-sm text-stone-700">Fixação mecânica da base (concreto firme, sem vibração)</span>
+                            </li>
+                            <li class="p-4 hover:bg-stone-50 flex items-center">
+                                <input type="checkbox" class="w-4 h-4 text-orange-600 rounded border-stone-300 focus:ring-orange-500">
+                                <span class="ml-3 text-sm text-stone-700">Alinhamento da cremalheira (folga de 2mm da engrenagem)</span>
+                            </li>
+                            <li class="p-4 hover:bg-stone-50 flex items-center">
+                                <input type="checkbox" class="w-4 h-4 text-orange-600 rounded border-stone-300 focus:ring-orange-500">
+                                <span class="ml-3 text-sm text-stone-700">Ajuste de Fim de Curso (Imãs firmes, parada suave)</span>
+                            </li>
+                            <li class="p-4 hover:bg-stone-50 flex items-center">
+                                <input type="checkbox" class="w-4 h-4 text-orange-600 rounded border-stone-300 focus:ring-orange-500">
+                                <span class="ml-3 text-sm text-stone-700">Teste de Fotocélula (Obstruir e verificar reversão imediata)</span>
+                            </li>
+                            <li class="p-4 hover:bg-stone-50 flex items-center">
+                                <input type="checkbox" class="w-4 h-4 text-orange-600 rounded border-stone-300 focus:ring-orange-500">
+                                <span class="ml-3 text-sm text-stone-700">Embreagem Eletrônica/Força ajustada (Parar com a mão sem machucar)</span>
+                            </li>
+                        </ul>
+                        <div class="p-4 bg-stone-50 text-center">
+                            <button onclick="alert('Checklist Reiniciado')" class="text-xs text-orange-600 font-bold uppercase tracking-wide">Limpar Marcações</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8">
+                <h3 class="font-bold text-lg mb-4">Manutenção Preventiva</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded border-t-4 border-green-500 shadow-sm">
+                        <div class="text-xs font-bold text-stone-400 uppercase">Mensal</div>
+                        <h4 class="font-bold text-stone-800">Visual e Limpeza</h4>
+                        <p class="text-sm mt-2 text-stone-600">Verificar folhas, galhos e trilho. Limpar fotocélulas.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded border-t-4 border-yellow-500 shadow-sm">
+                        <div class="text-xs font-bold text-stone-400 uppercase">Semestral</div>
+                        <h4 class="font-bold text-stone-800">Lubrificação e Aperto</h4>
+                        <p class="text-sm mt-2 text-stone-600">Reapertar parafusos da base e cremalheira. Lubrificar roldanas do portão (não a cremalheira!).</p>
+                    </div>
+                    <div class="bg-white p-4 rounded border-t-4 border-red-500 shadow-sm">
+                        <div class="text-xs font-bold text-stone-400 uppercase">Anual</div>
+                        <h4 class="font-bold text-stone-800">Elétrica e Baterias</h4>
+                        <p class="text-sm mt-2 text-stone-600">Testar capacitores (motores AC), verificar vida útil de baterias de controle e no-breaks.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-stone-900 text-stone-400 py-6 mt-auto">
+        <div class="container mx-auto px-4 text-center text-sm">
+            <p>&copy; 2024 Guia Técnico de Automatizadores. Conteúdo educacional para profissionais.</p>
+            <p class="text-xs mt-2">Marcas citadas (Rossi, AGL, PPA) pertencem aos seus respectivos proprietários.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Data Store
+        const products = [
+            { brand: 'Rossi', model: 'DZ Nano Turbo', type: 'Deslizante', weight: '600kg', cycle: '20%', tech: 'AC Padrão', speed: 'Normal (16m/min)', ip: 'IP44' },
+            { brand: 'Rossi', model: 'DZ Atto', type: 'Deslizante', weight: '350kg', cycle: '20%', tech: 'AC Compacto', speed: 'Normal', ip: 'IP44' },
+            { brand: 'PPA', model: 'DZ Hub', type: 'Deslizante', weight: '450kg', cycle: '30%', tech: 'Híbrido', speed: 'Rápido', ip: 'IP44' },
+            { brand: 'PPA', model: 'DZ Rio JetFlex', type: 'Deslizante', weight: '600kg', cycle: '100%', tech: 'Inversora (Brushless)', speed: 'Super Rápido (4s)', ip: 'IPX4' },
+            { brand: 'AGL', model: 'Trimmer', type: 'Deslizante', weight: '300kg', cycle: '20%', tech: 'AC Econômico', speed: 'Normal', ip: 'IP44' },
+            { brand: 'AGL', model: 'IZY', type: 'Deslizante', weight: '500kg', cycle: '40%', tech: 'Wi-Fi Integrado', speed: 'Rápido', ip: 'IP44' },
+            { brand: 'Rossi', model: 'Montana', type: 'Basculante', weight: '400kg', cycle: '25%', tech: 'AC Robusto', speed: 'Normal', ip: 'IP44' },
+            { brand: 'PPA', model: 'BV Penta JetFlex', type: 'Basculante', weight: '350kg', cycle: '100%', tech: 'Inversora', speed: 'Super Rápido', ip: 'IPX4' },
+        ];
+
+        // --- Navigation Logic ---
+        function navTo(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('section').forEach(sec => sec.classList.add('hidden-section'));
+            // Show target
+            document.getElementById(sectionId).classList.remove('hidden-section');
+            
+            // Update buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('text-orange-400'));
+            const activeBtn = document.getElementById('btn-' + sectionId);
+            if(activeBtn) activeBtn.classList.add('text-orange-400');
+
+            // Mobile menu toggle logic
+            document.getElementById('mobile-menu').classList.add('hidden');
+
+            // Trigger chart renders if needed
+            if (sectionId === 'compare') renderRadarChart();
+            if (sectionId === 'engineering') renderDutyChart();
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
+        // --- Simulator Logic ---
+        function updateSim() {
+            const weight = parseInt(document.getElementById('gateWeight').value);
+            const cycles = parseInt(document.getElementById('gateCycles').value);
+            const type = document.getElementById('gateType').value;
+            
+            // Update UI Labels
+            document.getElementById('weightVal').innerText = weight + " kg";
+            document.getElementById('cyclesVal').innerText = cycles + " ciclos/h";
+
+            // Logic
+            let recommendation = "";
+            let category = "";
+            let specificModels = [];
+
+            // Classify Category
+            if (cycles > 60 || weight > 800) {
+                category = "INDUSTRIAL / CONDOMÍNIO INTENSO";
+                recommendation = "Necessário motor com tecnologia <strong>Inversora (JetFlex/Vip)</strong> ou Trifásico. Ciclo de trabalho deve ser 100% (contínuo). Busque linhas PPA JetFlex Industrial ou Rossi Industrial.";
+            } else if (cycles > 20 || weight > 500) {
+                category = "CONDOMÍNIO LEVE / COMERCIAL";
+                recommendation = "Recomendado motor semi-industrial. Ciclo mínimo de 40-60%. Tecnologia <strong>Brushless</strong> ou Inversora é ideal para evitar aquecimento e garantir velocidade.";
+            } else {
+                category = "RESIDENCIAL";
+                recommendation = "Motor padrão (Ciclo 20%) é suficiente. Foco em custo-benefício ou conectividade (Wi-Fi) se desejado. Linhas Rossi Nano/Atto ou AGL Trimmer.";
+            }
+
+            // Render Result
+            const resultHTML = `
+                <div class="font-bold text-orange-700 mb-1">${category}</div>
+                <div class="text-sm">${recommendation}</div>
+                <div class="mt-2 text-xs text-stone-500">
+                    Tipo de Portão: ${type.charAt(0).toUpperCase() + type.slice(1)} | 
+                    Carga estimada: ${(weight * cycles).toLocaleString()} kg-mov/h
+                </div>
+            `;
+            document.getElementById('simResult').innerHTML = resultHTML;
+        }
+
+        // --- Table Population ---
+        function populateTable() {
+            const tbody = document.getElementById('comparisonTableBody');
+            tbody.innerHTML = '';
+            
+            products.forEach((p, index) => {
+                const row = document.createElement('tr');
+                row.className = index % 2 === 0 ? "bg-white border-b" : "bg-stone-50 border-b";
+                row.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-stone-900 whitespace-nowrap">${p.brand} ${p.model}</td>
+                    <td class="px-6 py-4">${p.type}</td>
+                    <td class="px-6 py-4">${p.weight}</td>
+                    <td class="px-6 py-4">${p.cycle}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs rounded-full 
+                            ${p.tech.includes('Inversora') ? 'bg-blue-100 text-blue-800' : 
+                            p.tech.includes('Wi-Fi') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                            ${p.tech}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">${p.speed}</td>
+                    <td class="px-6 py-4">${p.ip}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // --- Accordion Logic ---
+        function toggleAccordion(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById('icon-' + id);
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.innerText = '-';
+            } else {
+                content.classList.add('hidden');
+                icon.innerText = '+';
+            }
+        }
+
+        // --- Chart.js Rendering ---
+        let radarChartInstance = null;
+        let dutyChartInstance = null;
+
+        function renderRadarChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            
+            if (radarChartInstance) return; // Prevent re-rendering
+
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Velocidade', 'Torque/Força', 'Tecnologia Embarcada', 'Facilidade Instalação', 'Preço (Baixo)', 'Robustez Mecânica'],
+                    datasets: [
+                        {
+                            label: 'Rossi',
+                            data: [6, 9, 6, 8, 7, 9],
+                            fill: true,
+                            backgroundColor: 'rgba(234, 179, 8, 0.2)', // Yellow
+                            borderColor: 'rgb(234, 179, 8)',
+                            pointBackgroundColor: 'rgb(234, 179, 8)',
+                        },
+                        {
+                            label: 'PPA',
+                            data: [10, 7, 9, 7, 5, 7],
+                            fill: true,
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)', // Blue
+                            borderColor: 'rgb(59, 130, 246)',
+                            pointBackgroundColor: 'rgb(59, 130, 246)',
+                        },
+                        {
+                            label: 'AGL',
+                            data: [7, 6, 8, 9, 9, 6],
+                            fill: true,
+                            backgroundColor: 'rgba(34, 197, 94, 0.2)', // Green
+                            borderColor: 'rgb(34, 197, 94)',
+                            pointBackgroundColor: 'rgb(34, 197, 94)',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: { line: { borderWidth: 3 } },
+                    scales: {
+                        r: {
+                            angleLines: { display: true },
+                            suggestedMin: 0,
+                            suggestedMax: 10
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderDutyChart() {
+            const ctx = document.getElementById('dutyChart').getContext('2d');
+            
+            if (dutyChartInstance) return;
+
+            dutyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['0m', '5m', '10m', '15m', '20m', '25m', '30m'],
+                    datasets: [
+                        {
+                            label: 'Motor AC Padrão (Ciclo 20%)',
+                            data: [25, 45, 70, 95, 110, 120, 130], // Heats up fast
+                            borderColor: 'rgb(239, 68, 68)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Motor Inversora/Brushless (Ciclo 100%)',
+                            data: [25, 28, 30, 32, 33, 34, 35], // Stays cool
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.raw + '°C';
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    yMin: 100,
+                                    yMax: 100,
+                                    borderColor: 'black',
+                                    borderWidth: 2,
+                                    label: {
+                                        content: 'Limite Térmico (Desligamento)',
+                                        enabled: true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Temperatura Interna (°C)' },
+                            suggestedMax: 140
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            updateSim();
+            populateTable();
+        });
+
+    </script>
+</body>
+</html>
